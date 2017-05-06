@@ -13,6 +13,8 @@ const promisify = require('micro-promisify');
 const postcss = require('postcss');
 const postcssModules = require('postcss-modules');
 
+const cwd = process.cwd();
+
 const cssModulify = (path, data, map, options) => {
   let json = {};
   const getJSON = (_, _json) => json = _json; // eslint-disable-line
@@ -172,9 +174,10 @@ class SassCompiler {
           const data = result.css.toString().replace('/*# sourceMappingURL=a.css.map */', '');
           const map = JSON.parse(result.map.toString());
 
-          const includedFiles = result.stats.includedFiles;
+          const dependencies = result.stats.includedFiles.map(sysPath.relative.bind(null, cwd));
+          dependencies.push(sysPath.relative(cwd, source.path))
 
-          resolve({data, map, includedFiles});
+          resolve({data, map, dependencies});
         });
     });
   }
@@ -215,11 +218,11 @@ class SassCompiler {
 
   getDependencies (file) {
     return new Promise((resolve) => {
-      try {
-        this._nativeCompile(file).then((compiled) => resolve(compiled.includedFiles))
-      } catch (e) {
-        resolve([])
-      }
+      this._nativeCompile(file).then((compiled) => {
+        resolve(compiled.dependencies)
+      }).catch(() => {
+        resolve([sysPath.relative(cwd, file.path)])
+      })
     });
   }
 
