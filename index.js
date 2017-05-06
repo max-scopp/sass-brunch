@@ -171,9 +171,10 @@ class SassCompiler {
           }
           const data = result.css.toString().replace('/*# sourceMappingURL=a.css.map */', '');
           const map = JSON.parse(result.map.toString());
-          const dependencies = result.stats.includedFiles;
 
-          resolve({data, map, dependencies});
+          const includedFiles = result.stats.includedFiles;
+
+          resolve({data, map, includedFiles});
         });
     });
   }
@@ -212,14 +213,14 @@ class SassCompiler {
     });
   }
 
-  get getDependencies () {
-    return progeny({
-      rootPath: this.rootPath,
-      altPaths: this.includePaths,
-      reverseArgs: true,
-      globDeps: true,
+  getDependencies (file) {
+    return new Promise((resolve) => {
+      try {
+        this._nativeCompile(file).then((compiled) => resolve(compiled.includedFiles))
+      } catch (e) {
+        resolve([])
+      }
     });
-
   }
 
   get seekCompass () {
